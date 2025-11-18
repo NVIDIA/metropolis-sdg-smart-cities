@@ -2,16 +2,6 @@
 
 If you use this project or its components in your research, please cite the project and the third-party systems it builds upon.
 
-## Cite This Project
-```tex
-@misc{smartcity_sdg_2025,
-  title        = {Synthetic Data Generation for Smart City Applications},
-  author       = {Project Contributors},
-  year         = {2025},
-  note         = {Software repository}
-}
-```
-
 ## NIM Components
 
 ### Cosmos-Reason1-7B (VLM)

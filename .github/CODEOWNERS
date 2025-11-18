@@ -1,17 +1,14 @@
-#cpp code owners
-cpp/               @<org>/<repo>-cpp-codeowners
-
 #python code owners
-python/            @<org>/<repo>-python-codeowners
+modules @metropolis-sdg-team/metropolis-sdg-codeowners
 
-#cmake code owners
-**/CMakeLists.txt  @<org>/<repo>-cmake-codeowners
-**/cmake/          @<org>/<repo>-cmake-codeowners
+#notebooks code owners
+notebooks @metropolis-sdg-team/metropolis-sdg-codeowners
+
+#data code owners
+data @metropolis-sdg-team/metropolis-sdg-codeowners
 
 #build/ops code owners
-.github/           @<org>/ops-codeowners 
-ci/                @<org>/ops-codeowners
-conda/             @<org>/ops-codeowners
-**/Dockerfile      @<org>/ops-codeowners
-**/.dockerignore   @<org>/ops-codeowners
-docker/            @<org>/ops-codeowners
+deploy @metropolis-sdg-team/metropolis-sdg-codeowners
+.github @metropolis-sdg-team/metropolis-sdg-codeowners
+pyproject.toml @metropolis-sdg-team/metropolis-sdg-codeowners
+

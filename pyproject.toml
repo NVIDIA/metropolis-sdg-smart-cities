@@ -16,7 +16,7 @@
 [project]
 name = "smartcity-sdg-workbench"
 version = "0.1.0"
-description = "Workbench and tools for Smart City SDG: augmentation, CARLA GT, postprocess"
+description = "Metropolis SDG Smart Cities: workbench and tools for CARLA GT, augmentation, and postprocess"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

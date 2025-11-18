@@ -177,7 +177,7 @@ def main():
     
     for sample in config["data"]:
         try:
-            # TODO: Implement video creation as an optional block if the input fields are folders (removing this eventually, IRA should be responsible to avoid excess data transfer)
+            # Optional: video creation step can be added if inputs are folders (deferred to external orchestrator to avoid excess data transfer)
             logger.info(f"Processing sample: {sample}")
             print("Sample: ", sample)
             
@@ -292,7 +292,7 @@ def main():
                     logger.error(f"Failed to decode existing prompt: {e}")
                     continue
 
-            # Run cosmos #TODO move this outside as well to improve parallelism on an orchestrator level
+            # Run cosmos (execution may be externalized in an orchestrator for higher parallelism)
             if "cosmos" in config:
                 try:
                     if prompt is None:

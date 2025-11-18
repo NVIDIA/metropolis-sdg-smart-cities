@@ -126,7 +126,7 @@ case "$MODE" in
     echo "[deploy] Mode: heterogeneous (Workbench-only on this node)"
     if ! check_nvcr_login; then
       echo "[deploy][warn] Not logged into nvcr.io. If your workbench Dockerfile uses NVCR base images, please login:"
-      echo "  docker login nvcr.io (username: oauthtoken; password: your NGC API key)"
+      echo "  docker login nvcr.io (username: $oauthtoken; password: your NGC API key)"
     fi
     if [ -z "${NIM_HOST:-}" ]; then
       if [ -f env ]; then
@@ -136,10 +136,22 @@ case "$MODE" in
     fi
     if [ -z "${NIM_HOST:-}" ]; then
       echo "[deploy][error] NIM_HOST not set. Set NIM_HOST in the environment or 'env' file before deploying Workbench."
-      echo "Example: export NIM_HOST=<NIM_NODE_IP> && ./deploy.sh het-workbench"
+      echo "Example: export NIM_HOST=<NIM_NODE_IP> && ./deploy.sh workbench"
       exit 1
     fi
     echo "[deploy] Using NIM_HOST: $NIM_HOST"
+    # Confirm NIM_HOST looks correct to the user before proceeding
+    read -r -p "[deploy] Is this the correct NIM host for your NIM node? [y/N]: " _ans
+    case "${_ans:-N}" in
+      y|Y|yes|YES)
+        ;;
+      *)
+        echo "[deploy][info] Please edit 'deploy/compose/env' and set NIM_HOST to your NIM node IP, then re-run:"
+        echo "  cd deploy/compose && vi env    # or your preferred editor"
+        echo "  ./deploy.sh workbench"
+        exit 1
+        ;;
+    esac
     docker compose -f docker-compose.workbench.yml --env-file env up -d
     ;;
 

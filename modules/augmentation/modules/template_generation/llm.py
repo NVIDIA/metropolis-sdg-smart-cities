@@ -450,8 +450,8 @@ class LLMTemplateGenerator:
         except Exception as e:
             error_msg = f"Error in template generation: {e}"
             self.logger.error(error_msg)
-            # TODO: Implement retry policy
-            # if retry_policy is "check_vars", check if the variables are in the template , so that we generate a template which meets the requirements
+            # Note: Retry policy hook. If retry_policy is "check_vars", a future enhancement
+            # may verify required variables exist in the template before retrying.
             if self.retry > 0:
                 self.retry -= 1
                 self.logger.info(f"Retrying {self.retry} times")

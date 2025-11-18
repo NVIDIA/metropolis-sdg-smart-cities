@@ -80,7 +80,6 @@ services:
       - LOG_FILE=gradio.log
       - HF_HOME=/root/.cache/huggingface
       - HF_TOKEN=${HF_TOKEN}
-    #TODO: @ajothi to switch this to a specific tag once cutoff done ETA: 10/29
     entrypoint:
       - /bin/bash
       - -c

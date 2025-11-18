@@ -140,8 +140,8 @@ Notes:
 1) Clone the repository 
 
 ```bash 
-git clone <repository.git>
-cd its-github 
+git clone https://github.com/NVIDIA/metropolis-sdg-smart-cities.git
+cd metropolis-sdg-smart-cities 
 ```
 
 2) Download sample CARLA logs
@@ -191,7 +191,7 @@ Once the NIM stack is up, launch the CARLA server and notebook/workbench stack, 
 
 ```bash
 # On the second machine, ensure steps 1-3 are complete to have the repository and configuration ready before this step.
-export NIM_HOST=<ip_of_nim_node> # Set NIM host to IP of machine 1 printed in the previous step.
+# The deployment script sources `deploy/compose/env`, where `NIM_HOST` defaults to `localhost`. This will override any previously exported `NIM_HOST`. Before running `./deploy.sh workbench`, edit `deploy/compose/env` and set `NIM_HOST=<ip_of_nim_node>`. The script will prompt you to confirm the detected value.
 cd deploy/compose
 ./deploy.sh workbench
 ```
@@ -219,34 +219,6 @@ curl http://$HOST:8002/v1/health/ready  # LLM should return "Service is live."
     - Stage 2: COSMOS photo-realistic augmentation
     - Stage 3: SoM-aligned post-processing for VLM training
 ---
-
-## Configuration
-
-Environment file (`deploy/compose/env.example`)
-- Set credentials: `NGC_API_KEY`, `HF_TOKEN`
-- Select GPUs per service: `*_GPU_ID`, `*_GPU_COUNT`
-- Ports: `NOTEBOOK_PORT`, `VLM_PORT`, `LLM_PORT`, `TRANSFER_GRADIO_PORT`, `CARLA_PORT`
-- Endpoints auto-derived from host and ports
-
-CARLA ground-truth generation:
-- JSON workflow/config and per-camera YAMLs (see `modules/carla-ground-truth-generation/config/`)
-- Typical invocation from the repository root directory:
-```bash
-cd modules/carla-ground-truth-generation
-python main.py --config config/wrong_way.json
-# Or with workflow config overrides
-python main.py --wf-config wf-config.json --config config/wrong_way.json
-```
-
-COSMOS augmentation (Cosmos-Transfer2.5):
-- YAML config drives cameras, template/prompt generation, and COSMOS execution (see `modules/augmentation/configs/`)
-- Typical invocation from workbench shell:
-```bash
-uv run modules/augmentation/modules/cli.py --config modules/augmentation/configs/config_carla.yaml
-```
-
-Notebook workflow:
-- `notebooks/carla_synthetic_data_generation.ipynb`
 
 ## Advanced Configuration
 - For a complete list of configuration options, field definitions, and recommendations, see `data/docs/advanced_configuration.md`.
@@ -291,6 +263,27 @@ Example configs and logs can be found [here](https://github.com/inverted-ai/metr
 ```bash
 docker run --rm --gpus all nvidia/cuda:12.2-runtime-ubuntu22.04 nvidia-smi
 ```
+- Set NVIDIA runtime as default so containers can access GPU:
+  - Edit `/etc/docker/daemon.json`:
+    ```json
+    {
+      "runtimes": {
+        "nvidia": {
+          "path": "nvidia-container-runtime",
+          "runtimeArgs": []
+        }
+      },
+      "default-runtime": "nvidia"
+    }
+    ```
+  - Then restart Docker and relaunch containers:
+    ```bash
+    sudo systemctl daemon-reload && sudo systemctl restart docker
+    # If already running, bring down and redeploy
+    docker compose -f deploy/compose/docker-compose.nim.yml --env-file deploy/compose/env down || true
+    docker compose -f deploy/compose/docker-compose.workbench.yml --env-file deploy/compose/env down || true
+    cd deploy/compose && ./deploy.sh
+    ```
 
 **NGC login required:**
 - `docker login nvcr.io` with `$oauthtoken` and your `NGC_API_KEY`
@@ -375,6 +368,10 @@ docker logs transfer2_5-gradio
 # [11-10 19:25:53|INFO|cosmos_transfer2/inference.py:108:__init__] Saved config to outputs/config.yaml
 ```
 
+**Slow CARLA simulation:**
+- If you encounter the message `WARNING: lavapipe is not a conformant vulkan implementation, testing use only.`, this usually means your container is not using the NVIDIA container runtime, or your GPU is not supported by CARLA. 
+  - To resolve this, ensure the NVIDIA runtime is enabled for Docker (see the setup section for details on configuring it as default).
+  - If your GPU is unsupported, try to match your setup to the hardware recommendations in this README or use a supported environment.
 
 ---
 

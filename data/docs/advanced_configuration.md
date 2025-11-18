@@ -1,4 +1,4 @@
-## Advanced Configuration Guide
+## Advanced Configuration Guide — Metropolis SDG Smart Cities
 
 This guide documents all configuration knobs used by the SDG workflow across CARLA ground-truth generation, augmentation/orchestration, and deployment/runtime. It explains each field, types, defaults, constraints, and recommendations for first-time success and advanced tuning.
 
