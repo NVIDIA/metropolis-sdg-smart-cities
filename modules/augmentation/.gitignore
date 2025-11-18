@@ -1,0 +1,23 @@
+__pycache__/*
+**/__pycache__/*
+_logs/*
+_out/*
+*.egg-info/*
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.pyzwz
+*.env
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# UV cache
+.uv-cache/
+secrets.json

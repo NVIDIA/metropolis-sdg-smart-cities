@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[project]
+name = "carla-ground-truth-generation"
+version = "0.1.0"
+description = "CARLA ground truth data generation pipeline for ODVG datasets"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "carla==0.9.16",
+    "matplotlib>=3.10.0,<4.0.0",
+    "numpy>=2.2.0,<3.0.0",
+    "opencv-python>=4.10.0,<5.0.0",
+    "pyyaml>=6.0.0,<7.0.0",
+]
+
+[dependency-groups]
+dev = []
+

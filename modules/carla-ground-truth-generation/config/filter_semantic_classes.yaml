@@ -1,0 +1,28 @@
+canny_classes:
+  # CityScapesPalette colors (BGR format as used by OpenCV)
+  - [128, 64, 128]   # road
+  - [232, 35, 244]   # sidewalk (BGR from RGB 244,35,232)
+  - [152, 251, 152]  # terrain (BGR from RGB 152,251,152)
+  - [50, 234, 157]   # lane marking (BGR from RGB 157,234,50)
+  - [0, 220, 220]    # traffic sign (BGR from RGB 220,220,0)
+  - [30, 170, 250]   # traffic light (BGR from RGB 250,170,30)
+  - [153, 153, 153]  # pole (BGR from RGB 153,153,153)
+  - [156, 102, 102]  # wall (BGR from RGB 102,102,156)
+  - [153, 153, 190]  # fence (BGR from RGB 190,153,153)
+  - [81, 0, 81]      # ground (BGR from RGB 81,0,81)
+  - [35, 142, 107]   # vegetation (BGR from RGB 107,142,35)
+  - [80, 90, 55]     # other/misc (BGR from RGB 55,90,80)
+  
+  # Vehicles and dynamic objects:
+  - [142, 0, 0]      # car (BGR from RGB 0,0,142)
+  - [70, 0, 0]       # truck (BGR from RGB 0,0,70)  
+  - [100, 60, 0]     # bus (BGR from RGB 0,60,100)
+  - [230, 0, 0]      # motorcycle (BGR from RGB 0,0,230)
+  - [32, 11, 119]    # bicycle (BGR from RGB 119,11,32)
+  - [60, 20, 220]    # pedestrian (BGR from RGB 220,20,60)
+  - [0, 0, 255]      # rider (BGR from RGB 255,0,0)
+  - [100, 80, 0]     # train (BGR from RGB 0,80,100)
+  
+  # Optional: Currently excluded classes (uncomment to include):
+  # - [70, 70, 70]     # building (BGR from RGB 70,70,70)
+  # - [180, 130, 70]   # sky (BGR from RGB 70,130,180)

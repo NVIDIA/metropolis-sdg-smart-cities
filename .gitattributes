@@ -1,0 +1,11 @@
+data/examples/1.log filter=lfs diff=lfs merge=lfs -text
+data/examples/1.yaml filter=lfs diff=lfs merge=lfs -text
+data/examples/1.json filter=lfs diff=lfs merge=lfs -text
+data/examples/2.log filter=lfs diff=lfs merge=lfs -text
+data/examples/2.yaml filter=lfs diff=lfs merge=lfs -text
+data/examples/2.json filter=lfs diff=lfs merge=lfs -text
+data/examples/3.log filter=lfs diff=lfs merge=lfs -text
+data/examples/3.yaml filter=lfs diff=lfs merge=lfs -text
+data/examples/3.json filter=lfs diff=lfs merge=lfs -text
+data/examples/filter_semantic_classes.yaml filter=lfs diff=lfs merge=lfs -text
+

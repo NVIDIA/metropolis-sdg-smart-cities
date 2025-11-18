@@ -1,0 +1,65 @@
+## SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+name: smartcity-sdg-workbench-stack
+
+services:
+  workbench:
+    image: ${WORKBENCH_IMAGE:-smartcity-sdg-workbench:latest}
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile.workbench
+    container_name: smartcity-sdg-workbench
+    network_mode: host
+    environment:
+    - DISPLAY=${DISPLAY}
+    - NGC_API_KEY=${NGC_API_KEY}
+    - BUILD_NVIDIA_API_KEY=${NGC_API_KEY}
+    - HF_TOKEN=${HF_TOKEN}
+    - NIM_HOST=${NIM_HOST}
+    - VLM_PORT=${VLM_PORT}
+    - LLM_PORT=${LLM_PORT}
+    - TRANSFER_GRADIO_PORT=${TRANSFER_GRADIO_PORT}
+    - CARLA_HOST=${CARLA_HOST}
+    - CARLA_PORT=${CARLA_PORT}
+    volumes:
+    - ${NOTEBOOK_WORKDIR:-../../notebooks}:/workspace/notebooks
+    - ${DATA_DIR:-../../data}:/workspace/data
+    - ${MODULES_DIR:-../../modules}:/workspace/modules
+    restart: unless-stopped
+    # privileged: true
+  carla-server:
+    image: ${CARLA_IMAGE:-carlasim/carla:0.9.16}
+    container_name: carla-server
+    restart: unless-stopped
+    # gpus: all
+    # runtime: nvidia
+    network_mode: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - NVIDIA_VISIBLE_DEVICES=${CARLA_VISIBLE_DEVICES:-0}
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - XDG_RUNTIME_DIR=/tmp/xdg_runtime
+    volumes:
+    - ${DATA_DIR:-../../data}:/workspace/data
+    - ${X11_UNIX_DIR:-/tmp/.X11-unix}:/tmp/.X11-unix:rw
+    # CARLA uses multiple UDP/TCP ports; expose the base RPC port
+    command: ["/bin/bash", "-lc", "/workspace/CarlaUE4.sh -carla-streaming-port=0 --carla-world-port=2000 -log -stdout -FullStdOutLogOutput -nosound -RenderOffScreen "]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${CARLA_GPU_ID:-0}"]
+              capabilities: [gpu,graphics,compute,utility,video,display]

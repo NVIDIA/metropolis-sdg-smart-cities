@@ -1,0 +1,111 @@
+## SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+name: nim-stack
+
+services:
+  reason1-nim:
+    image: ${VLM_IMAGE:-nvcr.io/nim/nvidia/cosmos-reason1-7b:1.4.0}
+    container_name: reason1-nim
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      - HF_TOKEN=${HF_TOKEN}
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+      - NIM_SERVER_PORT=${VLM_PORT:-8001}
+    volumes:
+      - $LOCAL_NIM_CACHE:/opt/nim/.cache
+    shm_size: "32g"
+    ipc: host
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${VLM_GPU_ID:-0}"]
+              capabilities: [gpu]
+
+  llm-nim:
+    image: ${LLM_IMAGE:-nvcr.io/nim/nvidia/nvidia-nemotron-nano-9b-v2:1}
+    container_name: llm-nim
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - NGC_API_KEY=${NGC_API_KEY}
+      - HF_TOKEN=${HF_TOKEN}
+      - CUDA_DEVICE_ORDER=PCI_BUS_ID
+      - NIM_SERVER_PORT=${LLM_PORT:-8002}
+    volumes:
+      - $LOCAL_NIM_CACHE:/opt/nim/.cache
+    shm_size: "16g"
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${LLM_GPU_ID:-1}"]
+              capabilities: [gpu]
+    ipc: host
+
+  transfer2_5-gradio:
+    image: ${TRANSFER_GRADIO_IMAGE:-cosmos-transfer2_5-gradio:v1.3.0}
+    build:
+      context: ${TRANSFER_DOCKERFILE:-https://github.com/nvidia-cosmos/cosmos-transfer2.5.git#v1.3.0}
+      dockerfile: Dockerfile
+      # For uv bytecode write that CT2.5 does during build
+      ulimits: 
+        nofile: 
+          soft: 65535
+          hard: 65535
+    container_name: transfer2_5-gradio
+    restart: unless-stopped
+    environment:
+      - NUM_GPUS=${TRANSFER_GPU_COUNT:-1}
+      - MODEL_NAME=${TRANSFER_MODEL_NAME:-edge}
+      - CHECKPOINT_DIR=/workspace/checkpoints
+      - LOG_FILE=gradio.log
+      - HF_HOME=/root/.cache/huggingface
+      - HF_TOKEN=${HF_TOKEN}
+    #TODO: @ajothi to switch this to a specific tag once cutoff done ETA: 10/29
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        set -e &&
+        cd /workspace &&
+        git init &&
+        git remote add origin https://github.com/nvidia-cosmos/cosmos-transfer2.5.git &&
+        git fetch --depth 1 origin tag v1.3.0 &&
+        git checkout -B v1.3.0 FETCH_HEAD &&
+        uv sync --all-extras &&
+        export PYTHONPATH=/workspace/:$PYTHONPATH &&
+        uv run python -m cosmos_transfer2.gradio.gradio_bootstrapper
+    network_mode: host
+    ipc: host
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    volumes:
+      - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface 
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["${TRANSFER_GPU_ID:-2}"]
+              capabilities: [gpu]

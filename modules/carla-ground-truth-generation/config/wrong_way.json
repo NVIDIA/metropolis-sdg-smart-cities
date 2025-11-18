@@ -1,0 +1,8 @@
+{
+    "camera_config": "config/scene1/cam1.yaml",
+    "recorder_filename": "example_data/wrong_way_scenarios_fixed/scenario_0/1753738530_carla_Town10HD_wrong_way_0_agent_0_fps30_output_log.log",
+    "output_dir": "output/multi_camera_scene1/cam1",
+    "start_time": 5.0,
+    "duration": 5.0,
+    "generate_videos": true
+}

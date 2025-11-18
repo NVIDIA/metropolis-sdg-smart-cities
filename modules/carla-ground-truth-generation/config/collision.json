@@ -1,0 +1,7 @@
+{
+    "camera_config": "config/collision/cam.yaml",
+    "recorder_filename": "example_data/colision_overlay_test/colision_sensor_test1.log",
+    "output_dir": "output/colision_overlay_test/cam",
+    "start_time": 100.0,
+    "generate_videos": true
+}

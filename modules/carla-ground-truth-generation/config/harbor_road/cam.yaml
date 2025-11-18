@@ -1,0 +1,81 @@
+# Third-person camera configuration
+# Camera with custom position and rotation
+
+- sensor: rgb
+  attributes:
+    image_size_x: 1920
+    image_size_y: 1080
+    fov: 90  # Field of view
+  transform:
+    location:
+      x: 42955  # Custom X position
+      y: -133661   # Custom Y position
+      z: 1200    # Custom Z position
+    rotation:
+      roll: 0     # Rotation X
+      pitch: -25     # Rotation Y
+      yaw: 75  # Rotation Z
+
+# Depth sensor with same view
+- sensor: depth
+  attributes:
+    image_size_x: 1920
+    image_size_y: 1080
+    fov: 90
+  transform:
+    location:
+      x: 42955
+      y: -133661
+      z: 1200
+    rotation:
+      roll: 0
+      pitch: -25
+      yaw: 75
+
+# Semantic segmentation with same view
+- sensor: semantic_segmentation
+  attributes:
+    image_size_x: 1920
+    image_size_y: 1080
+    fov: 90
+  transform:
+    location:
+      x: 42955
+      y: -133661
+      z: 1200
+    rotation:
+      roll: 0
+      pitch: -25
+      yaw: 75
+
+# Instance segmentation with same view
+- sensor: instance_segmentation
+  attributes:
+    image_size_x: 1920
+    image_size_y: 1080
+    fov: 90
+  transform:
+    location:
+      x: 42955
+      y: -133661
+      z: 1200
+    rotation:
+      roll: 0
+      pitch: -25
+      yaw: 75
+
+# Normals sensor with same view
+- sensor: normals
+  attributes:
+    image_size_x: 1920
+    image_size_y: 1080
+    fov: 90
+  transform:
+    location:
+      x: 42955
+      y: -133661
+      z: 1200
+    rotation:
+      roll: 0
+      pitch: -25
+      yaw: 75

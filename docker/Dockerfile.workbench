@@ -1,0 +1,81 @@
+## SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+## SPDX-License-Identifier: Apache-2.0
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+## http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Setup dependencies 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    git \
+    build-essential \
+    python3-dev \
+    pkg-config \
+    netcat-openbsd \
+    libsdl2-dev \
+    libsdl2-image-dev \
+    libsdl2-mixer-dev \
+    libsdl2-ttf-dev \
+    libfreetype6-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libpng-dev \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgl1 \
+    libglib2.0-0 \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace/
+
+COPY pyproject.toml /workspace/pyproject.toml
+COPY modules/ /workspace/modules/
+COPY notebooks/ /workspace/notebooks/
+COPY data/ /workspace/data/
+COPY *.md /workspace/
+
+# Install augmentation 
+COPY modules/augmentation/packman/ /app/packman/
+
+# Set Packman packages root directory
+ENV PM_PACKAGES_ROOT="/app/packman-packages"
+
+# Make packman executable and install omniverseclient for storage service comms
+RUN chmod +x /app/packman/packman && /app/packman/packman install omni_client_library.linux-x86_64 2.67.0
+# Set up Omni Client Library environment variables
+ENV OMNI_CLIENT_PATH="${PM_PACKAGES_ROOT}/chk/omni_client_library.linux-x86_64/2.67.0"
+ENV PYTHONPATH="${OMNI_CLIENT_PATH}/release/bindings-python"
+ENV LD_LIBRARY_PATH="${OMNI_CLIENT_PATH}/release"
+
+# Installs uv, see https://docs.astral.sh/uv/guides/integration/docker/#available-images
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
+ENV UV_PYTHON=3.11
+
+# Install project dependencies with uv (creates and uses a virtualenv)
+WORKDIR /workspace/
+RUN uv sync
+
+# Setup carla client 
+# RUN curl -LO https://tiny.carla.org/carla-0-9-16-linux
+# RUN mkdir carla-latest && tar -xzf carla-0-9-16-linux -C carla-latest && rm carla-0-9-16-linux
+# RUN uv pip install --force-reinstall carla-latest/PythonAPI/carla/dist/carla-0.9.16-cp312-cp312-manylinux_2_31_x86_64.whl
+RUN uv pip install carla==0.9.16
+
+EXPOSE 8888 
+
+ENTRYPOINT ["uv", "run", "jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--allow-root", "--no-browser", "--ServerApp.token=''", "--ServerApp.password=''"]

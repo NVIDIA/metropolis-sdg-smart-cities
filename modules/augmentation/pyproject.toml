@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=80", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "augmentation"
+version = "0.1.0"
+description = "A pipeline for processing simulation camera outputs through NVIDIA's COSMOS API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "colorama>=0.4.6",
+    "pyyaml>=6.0",
+    "toml>=0.10.2",
+    "gradio-client>=0.10.0",
+    "openai>=1.0.0",
+    "requests>=2.31.0",
+    "aiohttp>=3.8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["modules*"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.13.1",
+]

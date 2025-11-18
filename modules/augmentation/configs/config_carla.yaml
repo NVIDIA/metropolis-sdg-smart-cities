@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+data:
+- inputs:
+    rgb: "/app/data/video/rgb.mp4"
+    controls:
+      edge: "/app/data/video/edge.mp4"
+      depth: "/app/data/video/depth.mp4"
+      seg: "/app/data/video/seg.mp4"
+  output:
+    video: "/app/data/video/output.mp4"
+    caption: "/app/data/video/carla_prompt.txt"
+    metadata: "/app/data/video/carla_metadata.json"
+
+endpoints:
+  vlm:
+    url: "http://localhost:9001/v1"  # Override with VLM_ENDPOINT_URL env var
+    model: "nvidia/cosmos-reason1-7b"
+  llm:
+    url: "https://integrate.api.nvidia.com/v1"
+    model: "nvidia/llama-3.3-nemotron-super-49b-v1"
+  cosmos:
+    url: "http://localhost:30002/"  # Override with COSMOS_ENDPOINT_URL env var
+    model: "nvidia/Cosmos-Transfer2.5-7B"
+
+video_creation:
+  simulator: "carla"
+
+video_captioning:
+  system_prompt: |
+    "You are a helpful assistant. Answer the question in the following format: <think>\nyour reasoning\n</think>\n\n<answer>\nyour answer\n</answer>."
+  user_prompt: "Analyze the traffic intersection surveillance footage and generate a detailed description of the visual elements. Focus on: 1) Weather conditions (clear sky with shadows/highlights, overcast with flat lighting, snow falling with accumulation, rain with wet roads and reflections, or fog with reduced visibility), 2) Time of day and lighting conditions (dawn, morning, noon, afternoon, dusk, night), 3) Road conditions (dry, wet, icy, snow-covered) and marking visibility. Use objective, factual language to describe the observable visual details without speculation."
+  parameters:
+    retry: 0
+    temperature: 0.6
+    top_p: 0.95
+    frequency_penalty: 1.05
+    max_tokens: 4096
+    stream: false
+
+template_generation:
+  system_prompt_file: "prompts/carla_template_generation_system_prompt.txt"
+  parameters:
+    retry: 1
+    retry_policy: "default" # default / check_vars
+    temperature: 0
+    top_p: 0.95
+    max_tokens: 4096
+    frequency_penalty: 0
+    presence_penalty: 0
+    stream: true
+    polish_temperature: 0.8  # Temperature for prompt polishing (separate from template generation)
+
+  variables:
+    # Weather conditions (5 options)
+    weather_condition: ["clear_sky", "overcast", "snow_falling", "raining", "fog"]
+
+    # Lighting conditions (9 options)
+    lighting_condition: ["sunrise", "sunset", "twilight", "mid_morning", "afternoon", "zenith", "golden_hour", "blue_hour", "night"]
+
+    # Road conditions (5 options)
+    road_condition: ["dry", "snow", "sand", "puddles", "flooding"]
+
+
+prompt_generation:
+  seed: None
+  # save_prompts: true # Always save prompts
+
+cosmos:
+  executor_type: "gradio"  # gradio / nim
+  model_version: "ct25"
+  configuration: "configs/cosmos_configs/config_template.toml"
+  parameters:
+    sigma: 90
+    seed: None
+    guidance: 3
+    num_steps: 35
+    inference_name: "cosmos_transfer_inference" 
+
+    modalities: ["edge"]
+
+    weights:
+      edge: 1.0
+
+    positive_prompt: |
+      cinematic, photorealistic, ultra high quality, ultra high resolution, high fidelity, high definition, realistic traffic scene with proper physics and coherent motion
+
+    negative_prompt: |
+      The video captures a game playing, with bad crappy graphics and cartoonish frames. It represents a recording of old outdated games. The lighting looks very fake. The textures are very raw and basic. The geometries are very primitive. The images are very pixelated and of poor CG quality. There are many subtitles in the footage. Overall, the video is unrealistic at all.
+
+
+logging:
+  enabled: true
+  level: "INFO"

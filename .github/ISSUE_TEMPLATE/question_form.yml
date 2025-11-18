@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Question / Guidance
+description: Ask a question or request guidance about usage or configuration
+title: "[Q]: "
+labels: ["question"]
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What do you need help with?
+      placeholder: Briefly describe the question or the part of the workflow you’re unsure about.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Deploy / Docker Compose / deploy.sh
+        - Workbench / Notebooks
+        - CARLA (server / client)
+        - NIM - VLM (Cosmos-Reason1)
+        - NIM - LLM (Nemotron)
+        - Cosmos-Transfer 2.5
+        - Augmentation (configs / prompts)
+        - Postprocess (SoM overlays)
+        - Data / Examples
+        - Other / Not sure
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Provide any relevant commands, configs, or screenshots.
+      render: shell
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if applicable)
+      description: OS, GPU model, driver/CUDA, Docker Engine + Compose versions, NVIDIA Container Toolkit, image tags, GPU assignment.
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](../../CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
+
