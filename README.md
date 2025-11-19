@@ -22,10 +22,8 @@ An end-to-end workflow for generating photo-realistic synthetic data for Vision-
       - [Recorder Config](#recorder-config)
   - [System Requirements](#system-requirements)
   - [Quickstart (Docker Compose)](#quickstart-docker-compose)
-  - [Configuration](#configuration)
   - [Advanced Configuration](#advanced-configuration)
   - [Workflow Usage (Stage-by-Stage)](#workflow-usage-stage-by-stage)
-  - [Data Layout and Examples](#data-layout-and-examples)
   - [Troubleshooting / FAQ](#troubleshooting--faq)
   - [Security and Compliance](#security-and-compliance)
   - [Contributing and Support](#contributing-and-support)
@@ -35,13 +33,25 @@ An end-to-end workflow for generating photo-realistic synthetic data for Vision-
 ---
 
 ## Overview
-This workflow provides a Synthetic Data Generation (SDG) recipe to produce VLM-ready datasets for smart city applications:
-- CARLA-based scenario simulation and recording
-- Ground-truth extraction (RGB, Depth, Segmentation, Normals, 2D/3D bounding boxes, events)
-- COSMOS-Transfer photo-realistic augmentation guided by multi-modal inputs and prompts
-- SoM-aware post-processing to preserve object correspondence across modalities
+This workflow provides a Synthetic Data Generation (SDG) recipe to produce VLM-ready datasets for smart city applications. In areas where the highest model accuracy is vital, finetuning on domain specific data is essential. Synthetic data generation and augmentaion offer an easy and scalable way to collect this data to your exact specifications. However, there are significant challenges associated with creating diverse, photorealistic training data from simulators that this workflow aims to address:
 
-Primary components:
+- **Domain Gap**: While simulators provide perfect ground truth and controllable scenarios, their synthetic appearance creates a substantial domain gap that limits the performance of models trained on simulator data when deployed in real-world environments.
+- **Scalability Constraints**: Manually crafting diverse scenarios in simulators requires substantial engineering effort and computational resources, making it prohibitively expensive to scale up data diversity.
+- **Limited Visual Realism**: Traditional simulator outputs lack the photorealistic quality needed for robust real-world model deployment, requiring additional post-processing or domain adaptation techniques.
+
+To remedy these issues, this workflow provides a recipe to:
+- Simulate customized traffic scenarios using CARLA
+  - Ground-truth extraction from simulation (RGB, Depth, Segmentation, Normals, 2D/3D bounding boxes, events)	
+- Use COSMOS-Transfer to generate photo-realistic augmentations that bridge the sim-to-real gap
+- Scale synthetic data with customizable augmentation variables
+- Generate post-training datasets for model fine-tuning
+  -  SoM-aware post-processing to preserve object correspondence across modalities
+  -  Q&A Caption generation for VLM post-training
+
+The output of this recipe is designed to offer a simple hand-off for further fine-tuning and deployment in the metropolis stack.
+Refer to the [Cosmos Cookbook](https://nvidia-cosmos.github.io/cosmos-cookbook/) for [Fine-tuning](https://nvidia-cosmos.github.io/cosmos-cookbook/recipes/post_training/reason1/intelligent-transportation/post_training.html) and [VSS documentation](https://docs.nvidia.com/vss/latest/#) for [Deployment](https://docs.nvidia.com/vss/latest/content/installation-vlms.html#local-models-cosmos-reason1) guides.
+
+**Primary components:**
 - `modules/carla-ground-truth-generation`: CARLA ground-truth extraction and dataset tooling
 - `modules/augmentation`: Prompting, template/prompt generation, and COSMOS execution utilities
 - `modules/postprocess/postprocess_for_vlm.py`: SoM-aligned overlays/validations
@@ -164,7 +174,9 @@ cp env.example env
 4) Deploy the stack. There are two main deployment options available:
 
 - **Homogeneous Deployment:** This mode launches all NIM services (VLM, LLM, Cosmos-Transfer) and the Workbench on a single machine (default, no extra arguments). It is recommended for systems with at least 4 suitable GPUs (RTX support and 80+ GB VRAM). Simply run `./deploy.sh` to start the entire stack locally.
-![Homogeneous Deployment Diagram](data/docs/homogeneous.png)
+
+<img src="data/docs/homogeneous.png" width="700"> 
+
 ```bash
 # On the target machine 
 ./deploy.sh 
@@ -179,7 +191,8 @@ cp env.example env
 
 
 - **Heterogeneous Deployment:** This mode allows you to run the NIM stack (VLM, LLM, Cosmos-Transfer) on one machine and the Workbench (with CARLA) on another, using the `nim` and `workbench` arguments respectively. This is useful if you wish to distribute resource usage across multiple hosts. You'll need to set the `NIM_HOST` environment variable on the Workbench node to point to the NIM node.
-![Heterogeneous Deployment Diagram](data/docs/heterogeneous.png)
+
+<img src="data/docs/heterogeneous.png" width="700"> 
 
 The NIM stack requires a machine with 3 GPUs with 80+ GB VRAM (Ampere or later) to launch the 3 inference endpoints using the command below:
 ```bash
@@ -241,10 +254,11 @@ Stage 3 — Post-processing for VLM
 - Inputs: Augmented videos, Ground Truth metadata
 - Outputs: SoM-aligned overlays, Q&A pairs
 
----
+**Workflow Outputs by Stage:**
 
-## Data Layout and Examples
-Sample outputs are included under `data/outputs/`:
+<img src="data/docs/outputs.png" width="1000"> 
+
+Workflow outputs are generated under `data/outputs/`:
 - `CARLA/default_run/scenario_1/` → simulator GT outputs and videos
 - `Cosmos/default_run/scenario_1/` → stylized videos (augmentation variants)
 - `postprocess/` → SoM overlays and annotations
