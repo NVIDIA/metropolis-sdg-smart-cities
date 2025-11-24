@@ -146,7 +146,7 @@ class VLMSceneCaptioning:
                 raise Exception(f"Failed to read file {video_path}")
             with open(os.path.join(temp_dir, "video.mp4"), "wb") as f:
                 f.write(memoryview(content).tobytes())
-            logging.info(f"Uploaded video to {os.path.join(temp_dir, 'video.mp4')}")
+            logging.debug(f"Uploaded video to {os.path.join(temp_dir, 'video.mp4')}")
 
             try:
                 client = OpenAI(
@@ -173,7 +173,7 @@ class VLMSceneCaptioning:
                     },
                 ]
                 
-                logging.info("Sending chat completion request with video")
+                logging.debug("Sending chat completion request with video")
                 chat_response = client.chat.completions.create(
                     model=self.model,
                     messages=conversation,
@@ -196,7 +196,7 @@ class VLMSceneCaptioning:
                     },
                 )
                 assistant_message = chat_response.choices[0].message
-                logging.info(assistant_message.content)
+                logging.debug(assistant_message.content)
 
                 match = re.search(
                     r"<answer>(.*?)</answer>", assistant_message.content, re.DOTALL
@@ -214,7 +214,7 @@ class VLMSceneCaptioning:
                         "\n\n", "\n"
                     )  # Remove extra line breaks
                     caption = caption.strip()  # Remove leading/trailing whitespace
-                    logging.info(f"Generated caption: {caption}")
+                    logging.debug(f"Generated caption: {caption}")
                     return caption
                 else:
                     logging.error(

@@ -22,11 +22,11 @@ Source: `deploy/compose/env.example` (copied to `deploy/compose/env` for local e
 - LOCAL_NIM_CACHE: Local cache directory for NIM. Default: ~/.cache/nim
 - VLM_IMAGE: NIM image for Cosmos-Reason1. Example: nvcr.io/nim/nvidia/cosmos-reason1-7b:1.4.0
 - VLM_PORT: Port for VLM endpoint. Default: 8001
-- VLM_ENDPOINT: Derived as $NIM_HOST:$VLM_PORT
+- VLM_ENDPOINT: Derived as \$NIM_HOST:\$VLM_PORT
 - VLM_GPU_ID, VLM_GPU_COUNT: GPU selection and count for VLM container
 - LLM_IMAGE: NIM image for Nemotron model. Example: nvcr.io/nim/nvidia/nvidia-nemotron-nano-9b-v2:1
 - LLM_PORT: Port for LLM endpoint. Default: 8002
-- LLM_ENDPOINT: Derived as $NIM_HOST:$LLM_PORT
+- LLM_ENDPOINT: Derived as \$NIM_HOST:\$LLM_PORT
 - LLM_GPU_ID, LLM_GPU_COUNT: GPU selection and count for LLM container
 - TRANSFER_GRADIO_IMAGE: Cosmos-Transfer Gradio image tag. Example: cosmos-transfer2_5-gradio:v1.3.0
 - TRANSFER_GRADIO_PORT: Cosmos-Transfer port. Default: 8080
@@ -58,8 +58,8 @@ Notes
 ## Notebook runtime variables
 Source: `notebooks/carla_synthetic_data_generation.ipynb` (USER-EDITABLE VARIABLES cell)
 
-- BASE_INPUT_DIR: Constructed as $CARLA_OUTPUT_DIR/$RUN_ID; path to Stage-1 outputs.
-- BASE_OUTPUT_DIR: Constructed as $COSMOS_OUTPUT_DIR/$RUN_ID; path for Stage-2 outputs.
+- BASE_INPUT_DIR: Constructed as \$CARLA_OUTPUT_DIR/\$RUN_ID; path to Stage-1 outputs.
+- BASE_OUTPUT_DIR: Constructed as \$COSMOS_OUTPUT_DIR/\$RUN_ID; path for Stage-2 outputs.
 - CONFIG_FILE_PATH: Augmentation YAML config path. Default: /workspace/modules/augmentation/configs/config_carla.yaml
 - NUM_AUGMENTATIONS: Integer count per scenario.
 - Endpoints resolved from env:
@@ -75,7 +75,7 @@ Recommendations
 ---
 
 ## CARLA ground-truth configuration
-Stage-1 uses a JSON config (passed to `modules/carla-ground-truth-generation/main.py`) plus a camera YAML. Example files in `modules/carla-ground-truth-generation/config/`.
+Stage-1 uses a JSON config (passed to `modules/carla-ground-truth-generation/main.py`) plus a camera YAML. Example files in `modules/carla-ground-truth-generation/configs/`.
 
 ### JSON config fields (examples: `wrong_way.json`, `collision.json`)
 - host: CARLA host (string). Default usually localhost
@@ -194,7 +194,7 @@ Top-level sections
   - save_prompts: bool (optional)
 - cosmos:
   - executor_type: "gradio" | "nim" (current executor is gradio)
-  - model_version: "ct1" | "ct2.5" | "ct25" (ct25 becomes ct2.5 internally)
+  - model_version: "ct2.5" | "ct25" (ct25 becomes ct2.5 internally, ct1 is deprecated)
   - configuration: Path to a TOML/aux config (if used by server)
   - parameters:
     - sigma: int (ct1 uses int; ct2.5 optionally uses string `sigma_max`)

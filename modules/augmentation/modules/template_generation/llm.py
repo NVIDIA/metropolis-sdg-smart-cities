@@ -412,7 +412,7 @@ class LLMTemplateGenerator:
         Raises:
             RuntimeError: If template generation fails
         """
-        self.logger.info(f"Generating template for categories: {categories}")
+        self.logger.debug(f"Generating template for categories: {categories}")
         self.logger.debug(
             f"Using description: {description[:100]}..."
         )  # Log first 100 chars
@@ -450,8 +450,7 @@ class LLMTemplateGenerator:
         except Exception as e:
             error_msg = f"Error in template generation: {e}"
             self.logger.error(error_msg)
-            # Note: Retry policy hook. If retry_policy is "check_vars", a future enhancement
-            # may verify required variables exist in the template before retrying.
+            # if retry_policy is "check_vars", check if the variables are in the template , so that we generate a template which meets the requirements
             if self.retry > 0:
                 self.retry -= 1
                 self.logger.info(f"Retrying {self.retry} times")
@@ -502,7 +501,7 @@ class LLMTemplateGenerator:
             # Remove any chain-of-thought content and keep only content after the last </think>
             think_close_idx = polished.rfind("</think>")
             if think_close_idx != -1:
-                self.logger.info("Stripping chain-of-thought content up to last </think> tag")
+                self.logger.debug("Stripping chain-of-thought content up to last </think> tag")
                 polished = polished[think_close_idx + len("</think>") :].strip()
             
             # Normalize formatting similar to VLM caption cleaning
