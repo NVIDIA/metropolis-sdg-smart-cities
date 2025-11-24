@@ -21,15 +21,32 @@ set -euo pipefail
 # 2) heterogeneous:
 #    - nim: run only NIM(s) on this node (prints NIM_HOST to use elsewhere)
 #    - workbench: run only Workbench on another node; requires NIM_HOST to be set
+# 3) cleanup: stop and remove all containers
 #
 # Usage:
 #   ./deploy.sh                 # homogeneous (NIM + Workbench)
 #   ./deploy.sh nim             # NIM-only on this node
 #   ./deploy.sh workbench       # Workbench-only; requires NIM_HOST
+#   ./deploy.sh cleanup         # Stop and remove all containers
 #   DEPLOY_MODE=nim ./deploy.sh # alternative via env var
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+MODE="${1:-${DEPLOY_MODE:-homogeneous}}"
+
+# Handle cleanup mode early to avoid env sourcing issues
+if [ "$MODE" = "cleanup" ] || [ "$MODE" = "down" ] || [ "$MODE" = "stop" ]; then
+  echo "[deploy] Mode: cleanup (stopping and removing all containers)"
+  ENV_ARG=""
+  [ -f env ] && ENV_ARG="--env-file env"
+  echo "[deploy] Stopping NIM containers..."
+  docker compose -f docker-compose.nim.yml $ENV_ARG down 2>/dev/null || true
+  echo "[deploy] Stopping Workbench containers..."
+  docker compose -f docker-compose.workbench.yml $ENV_ARG down 2>/dev/null || true
+  echo "[deploy] Cleanup complete. All containers have been stopped and removed."
+  exit 0
+fi
 
 source ./env 
 LOCAL_UID=$(id -u)
@@ -40,10 +57,8 @@ mkdir -p $LOCAL_NIM_CACHE
 chown $LOCAL_UID:$LOCAL_GID $LOCAL_NIM_CACHE
 chmod 755 $LOCAL_NIM_CACHE
 
-MODE="${1:-${DEPLOY_MODE:-homogeneous}}"
-
 usage() {
-  echo "Usage: $0 [nim|workbench]"
+  echo "Usage: $0 [nim|workbench|cleanup]"
   exit 1
 }
 
@@ -72,6 +87,58 @@ require_docker_running() {
   fi
 }
 
+check_gpu_availability() {
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "[deploy][warn] nvidia-smi not found. GPU availability cannot be verified." >&2
+    return 1
+  fi
+  if ! nvidia-smi >/dev/null 2>&1; then
+    echo "[deploy][error] nvidia-smi failed. NVIDIA drivers may not be installed or GPU is not accessible." >&2
+    exit 1
+  fi
+  local gpu_count
+  gpu_count=$(nvidia-smi --list-gpus | wc -l)
+  if [ "$gpu_count" -eq 0 ]; then
+    echo "[deploy][error] No GPUs detected. This deployment requires NVIDIA GPUs." >&2
+    exit 1
+  fi
+  echo "[deploy] Found $gpu_count GPU(s)"
+  return 0
+}
+
+check_nvidia_container_toolkit() {
+  # Check if nvidia-container-runtime binary exists
+  if command -v nvidia-container-runtime >/dev/null 2>&1 || [ -f /usr/bin/nvidia-container-runtime ]; then
+    echo "[deploy] NVIDIA Container Toolkit found"
+    return 0
+  fi
+  
+  # Check if Docker info shows nvidia as available runtime
+  if docker info 2>/dev/null | grep -q "nvidia"; then
+    echo "[deploy] NVIDIA Container Toolkit verified (via Docker runtime)"
+    return 0
+  fi
+  
+  echo "[deploy][error] NVIDIA Container Toolkit not found or not configured." >&2
+  echo "[deploy][error] Please install and configure NVIDIA Container Toolkit:" >&2
+  echo "[deploy][error]   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html" >&2
+  exit 1
+}
+
+check_port_availability() {
+  local port="$1"
+  if ! command -v lsof >/dev/null 2>&1; then
+    echo "[deploy][error] 'lsof' command not found. Please install lsof package:" >&2
+    echo "[deploy][error]   Ubuntu/Debian: sudo apt-get install lsof" >&2
+    echo "[deploy][error]   RHEL/CentOS: sudo yum install lsof" >&2
+    exit 1
+  fi
+  if lsof -i ":$port" >/dev/null 2>&1; then
+    return 1
+  fi
+  return 0
+}
+
 check_nvcr_login() {
   local docker_config
   docker_config="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
@@ -95,8 +162,48 @@ require_nvcr_login() {
 
 echo "[deploy] Running prerequisite checks..."
 require_cmd docker
+require_cmd lsof
 require_docker_compose
 require_docker_running
+
+# Check GPU availability
+check_gpu_availability || echo "[deploy][warn] GPU check skipped or failed"
+
+# Check NVIDIA Container Toolkit
+check_nvidia_container_toolkit
+
+# Check port availability (only if env file exists)
+if [ -f env ]; then
+  set +u  # Temporarily allow unset variables
+  source ./env 2>/dev/null || true
+  set -u  # Re-enable strict mode
+  
+  port_conflicts=()
+  
+  # Determine which ports to check based on mode
+  if [ "$MODE" = "homogeneous" ] || [ "$MODE" = "nim" ]; then
+    if ! check_port_availability "${VLM_PORT:-8001}"; then port_conflicts+=("${VLM_PORT:-8001}"); fi
+    if ! check_port_availability "${LLM_PORT:-8002}"; then port_conflicts+=("${LLM_PORT:-8002}"); fi
+    if ! check_port_availability "${TRANSFER_GRADIO_PORT:-8080}"; then port_conflicts+=("${TRANSFER_GRADIO_PORT:-8080}"); fi
+  fi
+  if [ "$MODE" = "homogeneous" ] || [ "$MODE" = "workbench" ]; then
+    if ! check_port_availability "${NOTEBOOK_PORT:-8888}"; then port_conflicts+=("${NOTEBOOK_PORT:-8888}"); fi
+    if ! check_port_availability "${CARLA_PORT:-2000}"; then port_conflicts+=("${CARLA_PORT:-2000}"); fi
+    if ! check_port_availability "${CARLA_STREAM_PORT_UDP:-2001}"; then port_conflicts+=("${CARLA_STREAM_PORT_UDP:-2001}"); fi
+    if ! check_port_availability "${CARLA_STREAM_PORT_TCP:-2002}"; then port_conflicts+=("${CARLA_STREAM_PORT_TCP:-2002}"); fi
+  fi
+  
+  if [ ${#port_conflicts[@]} -gt 0 ]; then
+    echo "[deploy][error] Port conflict detected. The following ports are already in use:" >&2
+    for port in "${port_conflicts[@]}"; do
+      echo "[deploy][error]   Port $port" >&2
+    done
+    echo "[deploy][error] Please stop the conflicting services or update ports in 'env' file." >&2
+    exit 1
+  else
+    echo "[deploy] Port availability check passed"
+  fi
+fi
 
 case "$MODE" in
   homogeneous|homo|"")

@@ -11,7 +11,6 @@ An end-to-end workflow for generating photo-realistic synthetic data for Vision-
 
 ## Contents
 - [Synthetic Data Generation for Smart City Applications](#synthetic-data-generation-for-smart-city-applications)
-  - [Contents](#contents)
   - [Overview](#overview)
   - [Architecture](#architecture)
   - [Prerequisites](#prerequisites)
@@ -33,7 +32,7 @@ An end-to-end workflow for generating photo-realistic synthetic data for Vision-
 ---
 
 ## Overview
-This workflow provides a Synthetic Data Generation (SDG) recipe to produce VLM-ready datasets for smart city applications. In areas where the highest model accuracy is vital, finetuning on domain specific data is essential. Synthetic data generation and augmentaion offer an easy and scalable way to collect this data to your exact specifications. However, there are significant challenges associated with creating diverse, photorealistic training data from simulators that this workflow aims to address:
+This workflow provides a Synthetic Data Generation (SDG) recipe to produce VLM-ready datasets for smart city applications. In areas where the highest model accuracy is vital, finetuning on domain specific data is essential. Synthetic data generation and augmentation offer an easy and scalable way to collect this data to your exact specifications. However, there are significant challenges associated with creating diverse, photorealistic training data from simulators that this workflow aims to address:
 
 - **Domain Gap**: While simulators provide perfect ground truth and controllable scenarios, their synthetic appearance creates a substantial domain gap that limits the performance of models trained on simulator data when deployed in real-world environments.
 - **Scalability Constraints**: Manually crafting diverse scenarios in simulators requires substantial engineering effort and computational resources, making it prohibitively expensive to scale up data diversity.
@@ -114,7 +113,6 @@ To generate the ground truths, the SDG workflow needs to know the location of th
 - Linux with NVIDIA GPU and drivers
 - Docker Engine 28.0+ and Docker Compose v2
 - NVIDIA Container Toolkit (GPU access)
-- Git LFS (Large File Storage)
 - Internet access for pulling images and model weights
 - 250 GB Storage
 
@@ -136,7 +134,7 @@ Recommended GPU configuration. Stage definitions are provided in the [Workflow U
 |-------------------|---------|---------|---------|------------|
 | 4x RTX PRO 6000   | ~9m     | ~20m    | ~1m     | ~30m       |
 
-Times are measured for 1 augmentation with a 5s scenario on a homogeneous deployment with 4xRTX PRO 6000.
+Note: Times are measured for **1 augmentation with a 5s scenario** on a homogeneous deployment with 4xRTX PRO 6000.
 
 Notes:
 - The provided compose defaults map in `deploy/compose/env.example` separates GPUs for each NIM service and CARLA (via GPU IDs in the env/compose files).
@@ -156,7 +154,7 @@ cd metropolis-sdg-smart-cities
 
 2) Download sample CARLA logs
 
-> **Note:** Sample logs are provided by Inverted AI. Please review the data [terms of use](https://github.com/inverted-ai/metropolis/blob/master/LICENSE.md) to determine whether they are appropriate for your purposes. If you have your own data, you may skip this step.
+> **Note:** Sample logs are provided by Inverted AI. Please review the data [terms of use](https://github.com/inverted-ai/metropolis/blob/master/LICENSE.md) to determine whether they are appropriate for your purposes. If you have your own data you may skip this step and place it under `./data/examples/`
 ```bash
 git clone https://github.com/inverted-ai/metropolis.git
 mv ./metropolis/examples ./data/examples
@@ -171,11 +169,20 @@ cp env.example env
 ```
 
 
-4) Deploy the stack. There are two main deployment options available:
+4) Deploy the stack. The deployment script automatically performs prerequisite checks before starting containers:
+
+- **GPU availability**: Verifies NVIDIA GPUs are detected and accessible
+- **NVIDIA Container Toolkit**: Confirms GPU access from containers is configured
+- **Port availability**: Checks that required ports (8001, 8002, 8080, 8888, 2000-2002) are not already in use
+- **Docker and Docker Compose**: Verifies required tools are installed and Docker daemon is running
+
+If any critical checks fail, the script will exit with clear error messages. Address any issues before retrying deployment.
+
+There are two main deployment options available:
 
 - **Homogeneous Deployment:** This mode launches all NIM services (VLM, LLM, Cosmos-Transfer) and the Workbench on a single machine (default, no extra arguments). It is recommended for systems with at least 4 suitable GPUs (RTX support and 80+ GB VRAM). Simply run `./deploy.sh` to start the entire stack locally.
 
-<img src="data/docs/homogeneous.png" width="700"> 
+<img src="data/docs/homogeneous.png" width="60%"> 
 
 ```bash
 # On the target machine 
@@ -192,7 +199,7 @@ cp env.example env
 
 - **Heterogeneous Deployment:** This mode allows you to run the NIM stack (VLM, LLM, Cosmos-Transfer) on one machine and the Workbench (with CARLA) on another, using the `nim` and `workbench` arguments respectively. This is useful if you wish to distribute resource usage across multiple hosts. You'll need to set the `NIM_HOST` environment variable on the Workbench node to point to the NIM node.
 
-<img src="data/docs/heterogeneous.png" width="700"> 
+<img src="data/docs/heterogeneous.png" width="60%"> 
 
 The NIM stack requires a machine with 3 GPUs with 80+ GB VRAM (Ampere or later) to launch the 3 inference endpoints using the command below:
 ```bash
@@ -213,7 +220,9 @@ Choose the option that best fits your available hardware and workflow needs.
 
 5) Verify deployment and start using the system
 
-- Check NIM health:
+**Note:** On first deployment, NIMs require several minutes to download model checkpoints and initialize. Wait a few minutes before accessing services.
+
+**Check NIM health endpoints:**
 ```bash
 # If using heterogeneous deployment, set NIM_HOST to the NIM node IP first:
 # export NIM_HOST=<ip_of_nim_node>
@@ -231,6 +240,18 @@ curl http://$HOST:8002/v1/health/ready  # LLM should return "Service is live."
     - Stage 1: CARLA ground truth generation
     - Stage 2: COSMOS photo-realistic augmentation
     - Stage 3: SoM-aligned post-processing for VLM training
+
+6) Cleanup (when finished)
+
+To stop and remove all containers:
+
+```bash
+cd deploy/compose
+./deploy.sh cleanup
+```
+
+This will stop and remove all containers from both the NIM and Workbench stacks. For heterogeneous deployments, run this command on both nodes (NIM node and Workbench node) to fully clean up all containers.
+
 ---
 
 ## Advanced Configuration
@@ -256,7 +277,7 @@ Stage 3 — Post-processing for VLM
 
 **Workflow Outputs by Stage:**
 
-<img src="data/docs/outputs.png" width="1000"> 
+<img src="data/docs/outputs.png" width="90%"> 
 
 Workflow outputs are generated under `data/outputs/`:
 - `CARLA/default_run/scenario_1/` → simulator GT outputs and videos
@@ -300,7 +321,7 @@ docker run --rm --gpus all nvidia/cuda:12.2-runtime-ubuntu22.04 nvidia-smi
     ```
 
 **NGC login required:**
-- `docker login nvcr.io` with `$oauthtoken` and your `NGC_API_KEY`
+- `docker login nvcr.io` with username `$oauthtoken` and your `NGC_API_KEY` as the password
 
 **Docker permissions issues:**
 - If you see the error `Got permission denied while trying to connect to the Docker daemon socket`, your user likely does not have permission to access Docker. Common solutions:

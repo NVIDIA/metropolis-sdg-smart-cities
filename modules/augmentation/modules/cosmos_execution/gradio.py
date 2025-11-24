@@ -198,12 +198,12 @@ class GradioCosmosExecutor:
                 return None
             
             video_path = parsed['videos'][0]
-            self.logger.info(f"Found server output path: {video_path}")
+            self.logger.debug(f"Found server output path: {video_path}")
             
             # Convert relative path to absolute path
             if not video_path.startswith('/'):
                 video_path = f"/workspace/{video_path}"
-                self.logger.info(f"Converted to absolute path: {video_path}")
+                self.logger.debug(f"Converted to absolute path: {video_path}")
             
             return video_path
             
@@ -232,7 +232,7 @@ class GradioCosmosExecutor:
             
             # Construct the Gradio file serving URL
             file_url = f"{base_url}/gradio_api/file={server_video_path}"
-            self.logger.info(f"Downloading file from: {file_url}")
+            self.logger.debug(f"Downloading file from: {file_url}")
             
             # Download the file with timeout for large files
             response = requests.get(file_url, timeout=300)
@@ -243,7 +243,7 @@ class GradioCosmosExecutor:
                 f.write(response.content)
             
             file_size_mb = len(response.content) / (1024 * 1024)
-            self.logger.info(f"Successfully downloaded file ({file_size_mb:.2f} MB)")
+            self.logger.debug(f"Successfully downloaded file ({file_size_mb:.2f} MB)")
             return True
             
         except requests.RequestException as e:
@@ -308,7 +308,7 @@ class GradioCosmosExecutor:
             gradio_params = self._prepare_gradio_params(
                 prompt, input_video_path, control_videos
             )
-            self.logger.info(f"Gradio params: {gradio_params}")
+            self.logger.debug(f"Gradio params: {gradio_params}")
             
             with self._capture_gradio_output():
                 # Call Gradio API
@@ -338,7 +338,7 @@ class GradioCosmosExecutor:
                         self.logger.error(f"Failed to write file to {output_path}")
                         return False, None
                     
-                    self.logger.info(f"Successfully saved video to {output_path}")
+                    self.logger.debug(f"Successfully saved video to {output_path}")
                     return True, output_path
                     
                 except Exception as e:

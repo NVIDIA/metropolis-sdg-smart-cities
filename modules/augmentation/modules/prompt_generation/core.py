@@ -21,6 +21,7 @@ randomized variables from predefined sets of options.
 """
 import itertools
 import random
+import logging
 from typing import Dict, List
 
 
@@ -49,6 +50,7 @@ class PromptGenerator:
         """
         self._random = random.Random(seed)
         self.template = template
+        self.logger = logging.getLogger(__name__)
         if attributes is None:
             self.attributes = {}
         else:
@@ -99,10 +101,10 @@ class PromptGenerator:
                     )
                 else:
                     selections[placeholder] = ""
-            print(selections)
+            self.logger.debug(selections)
             return self.template.format(**selections), selections
         except KeyError as e:
-            print(f"KeyError: {e}")
+            self.logger.error(f"KeyError: {e}")
             return self.template, {}
 
     def all_combinations(self):

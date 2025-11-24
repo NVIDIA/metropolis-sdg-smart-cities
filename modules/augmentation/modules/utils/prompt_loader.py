@@ -78,7 +78,7 @@ def _load_prompt_from_file(prompt_file_path: str, config_dir: str = None, logger
             content = f.read().strip()
             
         if logger:
-            logger.info(f"Loaded prompt from file: {full_path}")
+            logger.debug(f"Loaded prompt from file: {full_path}")
             
         return content
         

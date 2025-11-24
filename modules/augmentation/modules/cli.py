@@ -43,7 +43,7 @@ def configure_s3(logger: logging.Logger):
     secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
     
     if not all([url, bucket, region, access_key_id, secret_access_key]):
-        logger.warning("S3 configuration incomplete. Some environment variables are missing.")
+        logger.debug("Skipping S3 configuration as some environment variables are missing.")
         return False
     
     try:
@@ -54,7 +54,7 @@ def configure_s3(logger: logging.Logger):
             accessKeyId=access_key_id,
             secretAccessKey=secret_access_key
         )
-        logger.info(f"S3 configuration set successfully: {result}")
+        logger.info(f"Configuration set successfully: {result}")
         return True
     except Exception as e:
         logger.error(f"Failed to configure S3: {e}")
@@ -65,7 +65,8 @@ def validate_environment(logger: logging.Logger):
     """
     Validate and warn about missing environment variables based on examples/.env.
     """
-    env_vars = [
+    # Required environment variables
+    required_env_vars = [
         # VLM/LLM/Cosmos
         "VLM_ENDPOINT_URL",
         "VLM_ENDPOINT_MODEL",
@@ -77,10 +78,12 @@ def validate_environment(logger: logging.Logger):
         "LOG_LEVEL",
 
         # API Keys
-        "NVIDIA_API_KEY",
         "BUILD_NVIDIA_API_KEY",
-
-        # AWS S3
+    ]
+    
+    # Optional environment variables
+    optional_env_vars = [
+        # AWS S3 (optional in configure_s3)
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_DEFAULT_REGION",
@@ -88,10 +91,16 @@ def validate_environment(logger: logging.Logger):
         "AWS_S3_BUCKET",
         "AWS_S3_ADDRESSING_STYLE",
     ]
-    for var in env_vars:
+    
+    for var in required_env_vars:
         if not os.getenv(var):
             logger.warning(f"Environment variable {var} is not set")
-    logger.info("Environment variables validated according to examples/.env")
+    
+    for var in optional_env_vars:
+        if not os.getenv(var):
+            logger.debug(f"Environment variable {var} is not set")
+
+    logger.info("Environment variables validated according to examples /.env")
 
 
 def main():
@@ -105,6 +114,15 @@ def main():
     logging.basicConfig(
         level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+    
+    # Suppress httpx INFO logs
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
+    print()
+    logger.info("="*80)
+    logger.info("Cosmos Augmentation")
+    logger.info(f"Start Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("="*80)
 
     # Configure S3 access
     configure_s3(logger)
@@ -152,9 +170,9 @@ def main():
         # Set up random seed for cosmos augmentation
         if config["cosmos"]["parameters"]["seed"] is None or config["cosmos"]["parameters"]["seed"] == "None":
             config["cosmos"]["parameters"]["seed"] = int(time.time())
-            logger.info(f"No seed provided; using current time as seed for cosmos augmentation: {config['cosmos']['parameters']['seed']}")
+            logger.debug(f"No seed provided; using current time as seed for cosmos augmentation: {config['cosmos']['parameters']['seed']}")
         else:
-            logger.info(f"Using seed {config['cosmos']['parameters']['seed']} for cosmos augmentation")
+            logger.debug(f"Using seed {config['cosmos']['parameters']['seed']} for cosmos augmentation")
         
         cosmos_executor = GradioCosmosExecutor(
             endpoint=os.getenv(
@@ -176,11 +194,10 @@ def main():
     overwrite_caption = os.getenv("OVERWRITE_CAPTION", "true")
     
     for sample in config["data"]:
+
+        logger.info("="*80)
+        logger.info(f"Processing sample: {sample['inputs']['rgb']}")
         try:
-            # Optional: video creation step can be added if inputs are folders (deferred to external orchestrator to avoid excess data transfer)
-            logger.info(f"Processing sample: {sample}")
-            print("Sample: ", sample)
-            
             # Validate sample data availability
             if not validate_sample_data_availability(sample, config, logger):
                 logger.error(f"Sample validation failed, skipping sample: {sample}")
@@ -203,22 +220,24 @@ def main():
             
 
             if result != omni.client.Result.OK or overwrite_caption == "true":
-                print("Caption not present, proceeding")
+                logger.debug("Caption not present, proceeding")
 
                 # Run video captioning
                 if "video_captioning" in config:
+                    logger.info("Running video captioning...")
                     try:
                         caption = vlm_scene_captioning.get_video_caption(
                             sample["inputs"]["rgb"]
                         )
-                        print(f"Caption: {caption}")
-                        logger.info(f"Video captioning completed successfully for {sample['inputs']['rgb']}")
+                        logger.debug(f"Caption: {caption}")
+                        logger.info("Video captioning completed successfully")
                     except Exception as e:
                         logger.error(f"Failed to generate video caption for {sample['inputs']['rgb']}: {e}")
                         continue
 
                 # Run template generation
                 if "template_generation" in config:
+                    logger.info("Running template generation and prompt polishing...")
                     try:
                         if caption is None:
                             logger.error("Caption is required for template generation but was not generated")
@@ -228,8 +247,6 @@ def main():
                             caption, list(config["template_generation"]["variables"].keys())
                         )
                         template_description = replace_words(caption, template)
-                        print(f"Template: {template}")
-                        logger.info("Template generation completed successfully")
                     except Exception as e:
                         logger.error(f"Failed to generate template: {e}")
                         continue
@@ -243,9 +260,9 @@ def main():
 
                         if config["prompt_generation"]["seed"] is None or config["prompt_generation"]["seed"] == "None":
                             config["prompt_generation"]["seed"] = int(time.time())
-                            logger.info(f"No seed provided; using current time {config['prompt_generation']['seed']} as seed for prompt generation")
+                            logger.debug(f"No seed provided; using current time {config['prompt_generation']['seed']} as seed for prompt generation")
                         else:
-                            logger.info(f"Using seed {config['prompt_generation']['seed']} for prompt generation")
+                            logger.debug(f"Using seed {config['prompt_generation']['seed']} for prompt generation")
                         
                         prompt_generator = PromptGenerator(
                             template=template_description,
@@ -253,13 +270,12 @@ def main():
                             seed=config["prompt_generation"]["seed"],
                         )
                         prompt, selections = prompt_generator.generate()
-                        print(f"templated prompt (raw): {prompt}")
                         
                         # Polish the prompt with LLM to make it natural
                         if "template_generation" in config:
                             try:
                                 polished_prompt = llm_template_generator.polish_prompt(prompt)
-                                print(f"templated prompt (polished): {polished_prompt}")
+                                logger.debug(f"Polished prompts: {polished_prompt}")
                                 prompt = polished_prompt
                                 logger.info("Prompt polishing completed successfully")
                             except Exception as e:
@@ -284,16 +300,19 @@ def main():
                         continue
             else:
                 try:
-                    print("Prompt already present, skipping")
+                    logger.debug("Prompt already present, skipping")
                     prompt = memoryview(content).tobytes().decode("utf-8")
-                    print(f"Prompt: {prompt}")
-                    logger.info("Using existing prompt from file")
+                    logger.debug(f"Prompt: {prompt}")
+                    logger.debug("Using existing prompt from file")
                 except Exception as e:
                     logger.error(f"Failed to decode existing prompt: {e}")
                     continue
 
-            # Run cosmos (execution may be externalized in an orchestrator for higher parallelism)
+            # Run cosmos #TODO move this outside as well to improve parallelism on an orchestrator level
             if "cosmos" in config:
+                print()
+                cosmos_execution_start_time = time.time()
+                logger.info("Running cosmos execution, please expect a long wait...")
                 try:
                     if prompt is None:
                         logger.error("Prompt is required for cosmos execution but was not generated or loaded")
@@ -311,9 +330,9 @@ def main():
                         logger.error(f"Failed to load control videos for sample {sample}: {e}")
                         continue
                         
-                    print(f"Prompt: {prompt}")
-                    print(f"Control videos: {control_videos}")
-                    print(f"Output video: {sample['output']['video']}")
+                    logger.debug(f"Prompts used for cosmos execution: {prompt}")
+                    logger.debug(f"Control videos: {control_videos}")
+                    logger.debug(f"Output video: {sample['output']['video']}")
                     
                     success, output_path = cosmos_executor.execute(
                         prompt,
@@ -325,7 +344,8 @@ def main():
                         logger.error("Failed to execute cosmos")
                         continue
                     sample["output"]["video"] = output_path
-                    logger.info(f"Cosmos execution completed successfully, output: {output_path}")
+                    elapsed_minutes = (time.time() - cosmos_execution_start_time) / 60
+                    logger.info(f"Cosmos execution completed successfully, time taken: {elapsed_minutes:.2f} minutes, saved video to: {output_path}")
                 except Exception as e:
                     logger.error(f"Failed during cosmos execution: {e}")
                     continue
@@ -354,7 +374,8 @@ def main():
                 logger.error(f"Failed to write metadata file {sample['output']['metadata']}: {e}")
                 continue
                 
-            logger.info(f"Sample processing completed successfully: {sample}")
+            logger.debug(f"Sample processing completed successfully: {sample}")
+            logger.info("="*80)
 
         except Exception as e:
             logger.error(f"Unexpected error processing sample {sample}: {e}")
